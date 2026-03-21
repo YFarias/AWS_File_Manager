@@ -1,0 +1,34 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListBucketWithinAllowedPrefixes",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "clientes/a/*",
+            "clientes/b/*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "ObjectCRUDWithinAllowedPrefixes",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::YOUR_BUCKET_NAME/clientes/a/*",
+        "arn:aws:s3:::YOUR_BUCKET_NAME/clientes/b/*"
+      ]
+    }
+  ]
+}
