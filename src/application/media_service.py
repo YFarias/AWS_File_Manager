@@ -3,12 +3,12 @@ import os
 from pathlib import Path
 from src.infrastructure.s3_client import S3Client
 from src.domain.schemas import (
-    S3ListRequest, 
-    S3FileSchema, 
-    S3FolderSchema, 
-    S3FolderContentResponse, 
-    S3CreateFolderRequest, 
-    UploadRequest, 
+    list_request, 
+    file_schema, 
+    folder_schema, 
+    list_response, 
+    create_folder_request, 
+    upload_request, 
     delete_request
 )
 from datetime import datetime
@@ -19,7 +19,7 @@ class MediaService:
         self.s3_client = s3_client
 
     # aws s3 ls
-    async def list_folder(self, request: S3ListRequest) -> S3FolderContentResponse:
+    async def list_folder(self, request: list_request) -> list_response:
         bucket = self.s3_client.get_bucket(request.storage_type)
         normalized_path = request.path.strip("/")
         if normalized_path:
@@ -31,7 +31,7 @@ class MediaService:
             Delimiter="/"
         )
 
-        files: List[S3FileSchema] = []
+        files: List[file_schema] = []
         if "Contents" in response:
             for obj in response["Contents"]:
                 if obj["Key"] == normalized_path:
@@ -43,7 +43,7 @@ class MediaService:
                     ExpiresIn=3600
                 )
 
-                files.append(S3FileSchema(
+                files.append(file_schema(
                     name=obj["Key"].replace(normalized_path, ""),
                     full_key=obj["Key"],
                     size_bytes=obj["Size"],
@@ -52,22 +52,22 @@ class MediaService:
                 ))
 
         # 4. Processa os Delimitadores (Pastas)
-        folders: List[S3FolderSchema] = []
+        folders: List[folder_schema] = []
         if "CommonPrefixes" in response:
             for prefix in response["CommonPrefixes"]:
                 folder_key = prefix["Prefix"]
-                folders.append(S3FolderSchema(
+                folders.append(folder_schema(
                     name=folder_key.replace(normalized_path, ""),
                     full_path=folder_key
                 ))
 
-        return S3FolderContentResponse(
+        return list_response(
             current_path=normalized_path,
             folders=folders,
             files=files
         )
     
-    async def create_folder(self, request: S3CreateFolderRequest) -> S3FolderSchema:
+    async def create_folder(self, request: create_folder_request) -> folder_schema:
         bucket = self.s3_client.get_bucket(request.storage_type)
         normalized_path = request.path.strip("/")
         if normalized_path:
@@ -78,13 +78,13 @@ class MediaService:
             Key=normalized_path
         )
         
-        return S3FolderSchema(
+        return folder_schema(
             name=normalized_path,
             full_path=normalized_path
         )
     
     # aws s3 sync "./local-folder" "s3://meu-bucket/remote-folder"
-    async def upload(self, request: UploadRequest) -> List[S3FileSchema]:
+    async def upload(self, request: upload_request) -> List[file_schema]:
         """
         Replica o 'aws s3 sync local_path s3://bucket/prefix'
         """
@@ -108,7 +108,7 @@ class MediaService:
                 uploaded = self.s3_client.sync_file(bucket, str(local_file_path), s3_key)
                 
                 if uploaded:
-                    uploaded_files.append(S3FileSchema(
+                    uploaded_files.append(file_schema(
                         name=file,
                         full_key=s3_key,
                         size_bytes=os.path.getsize(local_file_path),
