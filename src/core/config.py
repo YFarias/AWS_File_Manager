@@ -1,11 +1,10 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -20,25 +19,33 @@ class Settings(BaseSettings):
     environment: str = Field(default="development", validation_alias="ENVIRONMENT")
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
 
-    database_url: str = Field(
-        default="sqlite+aiosqlite:///./aws_file_manager.db",
-        validation_alias="DATABASE_URL",
+    aws_access_key_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("AWS_ACCESS_KEY_ID", "VITE_AWS_ACCESS_KEY_ID"),
     )
-    sqlalchemy_echo: bool = Field(default=False, validation_alias="SQLALCHEMY_ECHO")
-
-    aws_access_key_id: str = Field(default="", validation_alias="AWS_ACCESS_KEY_ID")
-    aws_secret_access_key: str = Field(default="", validation_alias="AWS_SECRET_ACCESS_KEY")
-    aws_region: str = Field(default="us-east-1", validation_alias="AWS_REGION")
-    aws_s3_bucket: str = Field(default="", validation_alias="AWS_S3_BUCKET")
+    aws_secret_access_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("AWS_SECRET_ACCESS_KEY", "VITE_AWS_SECRET_ACCESS_KEY"),
+    )
+    aws_region: str = Field(
+        default="us-east-1",
+        validation_alias=AliasChoices("AWS_REGION", "VITE_AWS_REGION"),
+    )
+    
+    aws_bucket_a: str = Field(
+        default="",
+        validation_alias=AliasChoices("AWS_BUCKET_A", "VITE_AWS_BUCKET_A"),
+    )
+    
+    aws_bucket_b: str = Field(
+        default="",
+        validation_alias=AliasChoices("AWS_BUCKET_B", "VITE_AWS_BUCKET_B"),
+    )
+    
     s3_presigned_url_expires_in: int = Field(
         default=900,
         validation_alias="S3_PRESIGNED_URL_EXPIRES_IN",
     )
-
-    jwt_secret_key: str = Field(default="change-me", validation_alias="JWT_SECRET_KEY")
-    jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
-    jwt_audience: str | None = Field(default=None, validation_alias="JWT_AUDIENCE")
-    jwt_issuer: str | None = Field(default=None, validation_alias="JWT_ISSUER")
 
     max_upload_size_bytes: int = Field(
         default=10 * 1024 * 1024,

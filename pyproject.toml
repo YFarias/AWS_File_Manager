@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "FastAPI microservice for managing files with AWS S3"
 authors = ["Your Team <team@example.com>"]
 readme = "README.md"
-packages = [{ include = "app" }]
+packages = [{ include = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
