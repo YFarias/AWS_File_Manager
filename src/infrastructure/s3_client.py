@@ -110,6 +110,15 @@ class S3Client:
         except (ClientError, BotoCoreError) as exc:
             raise S3DeleteError("Erro ao deletar objeto.", exc) from exc
 
+    #aws s3 mv "s3://idecanstorage/idecan-app-files/File/img_pref_jp/StorageTest/2204392.jpeg" "s3://idecanstorage/idecan-app-files/File/img_pref_jp/StorageTest/2204392_renamed.jpeg"
+    def rename(self, bucket: str, old_key: str, new_key: str) -> None:
+        _bucket = self.get_bucket(bucket)
+        try:
+            self._client.copy_object(Bucket=_bucket, CopySource={"Bucket": _bucket, "Key": old_key}, Key=new_key)
+            self._client.delete_object(Bucket=_bucket, Key=old_key)
+        except (ClientError, BotoCoreError) as exc:
+            raise S3DeleteError("Erro ao deletar objeto.", exc) from exc
+
 @lru_cache(maxsize=1)
 def get_s3_client() -> S3Client:
     return S3Client()

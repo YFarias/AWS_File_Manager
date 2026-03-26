@@ -12,7 +12,8 @@ from src.domain.schemas import (
     list_request, 
     create_folder_request, 
     upload_request, 
-    delete_request
+    delete_request,
+    rename_request
 )
 
 ### MAIN METHODS ### 
@@ -43,6 +44,11 @@ async def upload_files_from_web(
 async def delete(request: delete_request, s3_client: S3Client = fastapi.Depends(get_s3_client)):
     return await MediaService(s3_client).delete(request)
 
+
+@router.put("/rename")
+async def rename(request: rename_request, s3_client: S3Client = fastapi.Depends(get_s3_client)):
+    return await MediaService(s3_client).rename(request)
+
 ### EXTRA METHOD ###
 #get folder path
 @router.get("/select-folder")
@@ -51,7 +57,7 @@ async def select_folder():
     root.withdraw()
     root.attributes('-topmost', True)
     path = filedialog.askdirectory()
-    
+
     root.destroy()
 
     if not path:
@@ -76,4 +82,6 @@ async def select_folder():
         "total_arquivos": len(arquivos_encontrados),
         "arquivos": arquivos_encontrados
     }
+
+
 

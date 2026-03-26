@@ -9,7 +9,8 @@ from src.domain.schemas import (
     folder_schema, 
     list_response, 
     create_folder_request, 
-    delete_request
+    delete_request,
+    rename_request
 )
 from datetime import datetime
 
@@ -129,3 +130,11 @@ class MediaService:
             return True
         except Exception as e:
             raise Exception(f"Erro ao deletar arquivo: {e}")
+    
+    async def rename(self, request: rename_request) -> bool:
+        try:
+            bucket = self.s3_client.get_bucket(request.storage_type)
+            self.s3_client.rename(bucket, request.old_path, request.new_path)
+            return True
+        except Exception as e:
+            raise Exception(f"Erro ao renomear arquivo: {e}")

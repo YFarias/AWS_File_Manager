@@ -39,6 +39,12 @@ class delete_request(BaseModel):
     path: str
     storage_type: str
 
+class rename_request(BaseModel):
+    """Requisição para renomear um arquivo"""
+    old_path: str
+    new_path: str
+    storage_type: str
+
 ####### RESPONSES #######
 class list_response(BaseModel):
     """O retorno completo para o Front-end ao listar um diretório"""
