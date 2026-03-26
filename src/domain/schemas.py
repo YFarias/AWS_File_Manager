@@ -36,7 +36,7 @@ class upload_request(BaseModel):
 
 class delete_request(BaseModel):
     """Requisição para deletar um arquivo"""
-    file_key: str
+    path: str
     storage_type: str
 
 ####### RESPONSES #######

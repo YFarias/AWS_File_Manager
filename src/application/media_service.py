@@ -1,6 +1,7 @@
 from typing import List
 import os
 from pathlib import Path
+from fastapi import UploadFile
 from src.infrastructure.s3_client import S3Client
 from src.domain.schemas import (
     list_request, 
@@ -8,7 +9,6 @@ from src.domain.schemas import (
     folder_schema, 
     list_response, 
     create_folder_request, 
-    upload_request, 
     delete_request
 )
 from datetime import datetime
@@ -83,49 +83,49 @@ class MediaService:
             full_path=normalized_path
         )
     
-    # aws s3 sync "./local-folder" "s3://meu-bucket/remote-folder"
-    async def upload(self, request: upload_request) -> List[file_schema]:
+    async def upload_web_files(self, storage_type: str, remote_path: str, files: List[UploadFile]) -> List[file_schema]:
         """
-        Replica o 'aws s3 sync local_path s3://bucket/prefix'
+        Recebe arquivos do front-end e os envia em memória para o S3.
         """
-        bucket = self.s3_client.get_bucket(request.storage_type)
+        bucket = self.s3_client.get_bucket(storage_type)
         uploaded_files = []
-        local_path = Path(request.local_path)
-        remote_path = request.remote_path.strip("/")
+        
+        remote_path = remote_path.strip("/")
         if remote_path:
             remote_path += "/"
 
-        if not local_path.exists():
-            raise ValueError(f"O caminho local {request.local_path} não existe.")
-
-        for root, dirs, files in os.walk(request.local_path):
-            for file in files:
-                local_file_path = Path(root) / file
-                
-                relative_path = local_file_path.relative_to(local_path)
-                s3_key = os.path.join(remote_path, str(relative_path)).replace("\\", "/")
-
-                uploaded = self.s3_client.sync_file(bucket, str(local_file_path), s3_key)
-                
-                if uploaded:
-                    uploaded_files.append(file_schema(
-                        name=file,
-                        full_key=s3_key,
-                        size_bytes=os.path.getsize(local_file_path),
-                        last_modified=datetime.fromtimestamp(os.path.getmtime(local_file_path)),
-                        url=self.s3_client.generate_presigned_url(
-                            "get_object",
-                            Params={"Bucket": bucket, "Key": s3_key},
-                            ExpiresIn=3600
-                        )
-                    ))
+        for file in files:
+            # Pega o caminho/nome do arquivo
+            filename = file.filename or f"unnamed_{datetime.now().timestamp()}"
+            s3_key = os.path.join(remote_path, filename).replace("\\", "/")
+            
+            # Descobrindo o tamanho do arquivo em memória (necessário para o file_schema)
+            file.file.seek(0, 2)
+            file_size = file.file.tell()
+            file.file.seek(0)
+            
+            # Enviamos o arquivo em memória para o S3Client
+            success = self.s3_client.upload_fileobj(bucket, file.file, s3_key)
+            
+            if success:
+                uploaded_files.append(file_schema(
+                    name=os.path.basename(filename),
+                    full_key=s3_key,
+                    size_bytes=file_size,
+                    last_modified=datetime.now(),
+                    url=self.s3_client.generate_presigned_url(
+                        "get_object",
+                        Params={"Bucket": bucket, "Key": s3_key},
+                        ExpiresIn=3600
+                    )
+                ))
 
         return uploaded_files
 
     async def delete(self, request: delete_request) -> bool:
         try:
             bucket = self.s3_client.get_bucket(request.storage_type)
-            self.s3_client.delete(bucket, request.file_key)
+            self.s3_client.delete(bucket, request.path)
             return True
         except Exception as e:
             raise Exception(f"Erro ao deletar arquivo: {e}")

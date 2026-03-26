@@ -13,7 +13,6 @@ from src.domain.exceptions import S3ListError, S3UploadError, S3DeleteError, S3D
 class S3Client:
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
-
         self._client = boto3.client(
             "s3",
             aws_access_key_id=self._settings.aws_access_key_id,
@@ -31,19 +30,23 @@ class S3Client:
             
         if self._settings.aws_bucket_a:
             return self._settings.aws_bucket_a
-        raise ValueError(f"Bucket não configurado para o tipo: {storage_type}")    #aws s3 ls "s3://idecanstorage/idecan-app-files/File/img_pref_jp/StorageTest/"
+        raise ValueError(f"Bucket não configurado para o tipo: {storage_type}")
+        
+    #aws s3 ls "s3://idecanstorage/idecan-app-files/File/img_pref_jp/StorageTest/"
     def list_objects(self, Bucket: str, Prefix: str, Delimiter: str) -> dict:
+        _bucket = self.get_bucket(Bucket)
         """Lista objetos em um bucket com prefixo e delimitador."""
         try:
-            return self._client.list_objects(Bucket=Bucket, Prefix=Prefix, Delimiter=Delimiter)
+            return self._client.list_objects(Bucket=_bucket, Prefix=Prefix, Delimiter=Delimiter)
         except (ClientError, BotoCoreError) as exc:
             raise S3ListError("Erro ao listar objetos no bucket.", exc) from exc
     
     #aws s3 mb s3://idecanstorage
     def put_object(self, Bucket: str, Key: str) -> dict:
+        _bucket = self.get_bucket(Bucket)
         """Cria uma pasta no bucket."""
         try:
-            return self._client.put_object(Bucket=Bucket, Key=Key)
+            return self._client.put_object(Bucket=_bucket, Key=Key)
         except (ClientError, BotoCoreError) as exc:
             raise S3UploadError("Erro ao criar pasta.", exc) from exc
     
@@ -56,10 +59,10 @@ class S3Client:
     
     #aws s3 sync "./local-folder" "s3://meu-bucket/remote-folder"
     def sync_file(self, bucket: str, local_path: str, remote_key: str) -> bool:
-        
+        _bucket = self.get_bucket(bucket)    
         try:
             # 1. Tenta pegar os metadados do arquivo no S3
-            head = self._client.head_object(Bucket=bucket, Key=remote_key)
+            head = self._client.head_object(Bucket=_bucket, Key=remote_key)
             s3_size = head['ContentLength']
             
             # 2. Compara com o arquivo local
@@ -78,20 +81,32 @@ class S3Client:
         print(f"Subindo: {local_path} -> {remote_key}")
         return True
 
+    def upload_fileobj(self, bucket: str, file_obj: BinaryIO, remote_key: str) -> bool:
+        """Faz o upload de um arquivo stream/memória para o S3."""
+        _bucket = self.get_bucket(bucket)
+        try:
+            self._client.upload_fileobj(file_obj, _bucket, remote_key)
+            print(f"Subindo objeto de memória -> {remote_key}")
+            return True
+        except (ClientError, BotoCoreError) as exc:
+            raise S3UploadError("Erro ao fazer upload do arquivo da memória.", exc) from exc
+
     def download(self, bucket: str, key: str, expires_in: int = 900) -> str:
+        _bucket = self.get_bucket(bucket)
         try:
             return self._client.generate_presigned_url(
                 ClientMethod="get_object",
-                Params={"Bucket": bucket, "Key": key},
+                Params={"Bucket": _bucket, "Key": key},
                 ExpiresIn=expires_in,
             )
         except (ClientError, BotoCoreError) as exc:
             raise S3DownloadError("Erro ao gerar URL pré-assinada.", exc) from exc
 
     #aws s3 rm "s3://idecanstorage/idecan-app-files/File/img_pref_jp/StorageTest/2204392.jpeg"
-    def delete(self, bucket: str, key: str) -> None:
+    def delete(self, bucket: str, path: str) -> None:
+        _bucket = self.get_bucket(bucket)
         try:
-            self._client.delete_object(Bucket=bucket, Key=key)
+            self._client.delete_object(Bucket=_bucket, Key=path)
         except (ClientError, BotoCoreError) as exc:
             raise S3DeleteError("Erro ao deletar objeto.", exc) from exc
 
