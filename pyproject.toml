@@ -10,10 +10,6 @@ packages = [{ include = "src" }]
 python = "^3.11"
 fastapi = "^0.121.1"
 uvicorn = { extras = ["standard"], version = "^0.42.0" }
-sqlalchemy = "^2.0.44"
-alembic = "^1.17.1"
-asyncpg = "^0.30.0"
-aiosqlite = "^0.21.0"
 pydantic = "^2.12.2"
 pydantic-settings = "^2.11.0"
 boto3 = "^1.42.72"
