@@ -22,4 +22,27 @@ dist/
 venv/
 .venv/
 app/venv/
+env/
+ENV/
+bin/
+
+## IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings/
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Logs
+*.log
+
+## AWS/Secrets
+iam_policy.json
+secrets.json
 
